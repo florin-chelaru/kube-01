@@ -1,0 +1,48 @@
+# Tutorial: https://www.youtube.com/watch?v=IcslsH7OoYo&list=PL2_OBreMn7FoYmfx27iSwocotjiikS5BD&index=1&ab_channel=JeffGeerling
+
+brew install minikube
+brew install kubectl
+
+# There were some issues with virtualbox. Ended up:
+1. Uninstalling and reinstalling VirtualBox. Not with brew.
+2. Go to Security and Privacy, and at the bottom there's a message that you need to accept, which also triggers a restart of the computer. After that it worked.
+See also:
+https://www.howtogeek.com/658047/how-to-fix-virtualboxs-%E2%80%9Ckernel-driver-not-installed-rc-1908-error/
+and 
+https://stackoverflow.com/questions/52277019/how-to-fix-vm-issue-with-minikube-start
+
+# Default minikube VM uses virtualbox and 2 CPUs, 4G ram, 2G disk. 
+minikube start
+
+kubectl get nodes
+
+# Using minikube with multipass:
+https://github.com/kubernetes/minikube/issues/12946
+https://www.materialized.eu/kubernetes/minikube-on-ubuntu-in-multipass-vm-on-m1-mac/
+
+kubectl create deployment api-auth-01 --image=florinchelaru/api-auth-01
+# in the following command, port is the host port, and target-port is the container port
+kubectl expose deployment api-auth-01 --type=NodePort --port=3000 --target-port=3000
+
+kubectl get services api-auth-01
+minikube ip
+minikube service api-auth-01
+minikube delete
+
+# Kubernetes documentation: https://kubernetes.io/docs/home/
+
+minikube dashboard # looks pretty awesome
+
+kubectl apply -f spec.yaml # specify port for example or other env variables
+
+eval $(minikube docker-env) # switch to the docker built into minikube. now when you call docker build, it will build what you have in your local dir into minikube
+
+# Debugging what's going on with a container/deployment:
+kubectl get pod -l app=hello-go
+kubectl describe pod -l app=hello-go
+
+# Kubernetes secrets, for example to get a container from a private Docker repository: https://www.youtube.com/watch?v=nn9J9sWLj_w&list=PL2_OBreMn7FoYmfx27iSwocotjiikS5BD&index=3&ab_channel=JeffGeerling
+
+
+
+
