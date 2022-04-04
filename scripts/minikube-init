@@ -21,6 +21,8 @@ https://github.com/kubernetes/minikube/issues/12946
 https://www.materialized.eu/kubernetes/minikube-on-ubuntu-in-multipass-vm-on-m1-mac/
 
 kubectl create deployment api-auth-01 --image=florinchelaru/api-auth-01
+# Or from yaml:
+kubectl apply -f api-auth-01_deployment.yaml
 # in the following command, port is the host port, and target-port is the container port
 kubectl expose deployment api-auth-01 --type=NodePort --port=3000 --target-port=3000
 
@@ -38,11 +40,28 @@ kubectl apply -f spec.yaml # specify port for example or other env variables
 eval $(minikube docker-env) # switch to the docker built into minikube. now when you call docker build, it will build what you have in your local dir into minikube
 
 # Debugging what's going on with a container/deployment:
-kubectl get pod -l app=hello-go
-kubectl describe pod -l app=hello-go
+kubectl get pod -l app=api-auth-01
+kubectl describe pod -l app=api-auth-01
 
 # Kubernetes secrets, for example to get a container from a private Docker repository: https://www.youtube.com/watch?v=nn9J9sWLj_w&list=PL2_OBreMn7FoYmfx27iSwocotjiikS5BD&index=3&ab_channel=JeffGeerling
 
+# Editing the deployment:
+kubectl edit deployment api-auth-01
+
+# Add the following to .bash_profile to edit with sublime:
+export KUBE_EDITOR="/Applications/Sublime\ Text.app/Contents/SharedSupport/bin/subl -w"
 
 
+# Get logs just for my app:
+kubectl logs -f -l app=api-auth-01 --prefix=true
 
+# To update to a newer version of the container:
+#                            <name of deployment> <name of container>
+kubectl set image deployment/api-auth-01 api-auth-01=florinchelaru/api-auth-01:1.0.2
+watch kubectl get pods -l app=api-auth-01
+
+# Get rollout history:
+kubectl rollout history deployment api-auth-01
+
+# Roll back deployment:
+kubectl rollout undo deployment api-auth-01
