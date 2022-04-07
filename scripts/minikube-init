@@ -65,3 +65,21 @@ kubectl rollout history deployment api-auth-01
 
 # Roll back deployment:
 kubectl rollout undo deployment api-auth-01
+
+# Mongodb k8s deployment complete:
+https://github.com/scriptcamp/kubernetes-mongodb
+https://devopscube.com/deploy-mongodb-kubernetes/
+
+==== Ended up not using: Helm
+
+# Deploying with Helm: https://helm.sh/
+# Helm charts publicly available: https://artifacthub.io/
+# For example, the NodeJS chart by bitnami: https://artifacthub.io/packages/helm/bitnami/node
+
+brew install helm
+helm repo add bitnami https://charts.bitnami.com/bitnami
+
+# Need to start minikube before the next step. To start with multiple nodes: https://minikube.sigs.k8s.io/docs/tutorials/multi_node/
+minikube start --nodes 2
+
+helm install my-api-auth bitnami/node
