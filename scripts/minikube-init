@@ -69,6 +69,9 @@ kubectl rollout undo deployment api-auth-01
 # Mongodb k8s deployment complete:
 https://github.com/scriptcamp/kubernetes-mongodb
 https://devopscube.com/deploy-mongodb-kubernetes/
+- in this tutorial there's a hint about how we'll be able to access the mongo service from another app. look for "Login into the MongoDB shell". 
+- Hint: it's by using the service name as host. It's the same in the drupal example: https://github.com/geerlingguy/kubernetes-101/blob/master/episode-04/k8s-manifests/drupal.yml
+  notice `host` is set to `mariadb`, which is the service name.
 
 ==== Ended up not using: Helm
 
