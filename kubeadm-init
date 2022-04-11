@@ -1,0 +1,136 @@
+# https://phoenixnap.com/kb/install-kubernetes-on-ubuntu
+sudo apt-get update
+sudo apt-get install docker.io
+docker –v
+sudo systemctl enable docker
+sudo systemctl start docker
+
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+
+# Doesn't seem to help:
+# https://techviewleo.com/apt-key-is-deprecated-manage-keyring-files-in-trusted-gpg-dot-d/
+sudo apt install gnupg2 wget ca-certificates lsb-release software-properties-common
+wget -nc https://dl.winehq.org/wine-builds/winehq.key
+
+cat winehq.key | gpg --dearmor  > winehq.gpg
+sudo install -o root -g root -m 644 winehq.gpg /etc/apt/trusted.gpg.d/
+
+
+cat winehq.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/winehq.gpg  >/dev/null
+
+curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | sudo tee /usr/share/keyrings/yarnkey.gpg >/dev/null
+
+sudo add-apt-repository 'deb https://dl.winehq.org/wine-builds/debian/ bullseye main'
+
+sudo apt update
+
+#
+
+# not needed: sudo apt-get install curl
+
+sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+sudo apt-get install kubeadm kubelet kubectl
+sudo apt-mark hold kubeadm kubelet kubectl
+kubeadm version
+
+#
+
+swapoff –a
+
+sudo hostnamectl set-hostname main-node
+sudo hostnamectl set-hostname worker01
+
+# Next: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/
+
+# In main node:
+
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+
+## This will generate something like:
+
+Your Kubernetes control-plane has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Alternatively, if you are the root user, you can run:
+
+  export KUBECONFIG=/etc/kubernetes/admin.conf
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+kubeadm join 192.168.86.101:6443 --token xgeusy.nbzf49tia6lk8kxv \
+	--discovery-token-ca-cert-hash sha256:4f2d048dabaa11622a47a7cb2d7b4cdf7275422e189b4ac9e094c13f3c6be05b 
+
+##
+
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+sudo reboot
+
+# Other options for pod network: https://projectcalico.docs.tigera.io/getting-started/kubernetes/flannel/flannel
+
+curl https://projectcalico.docs.tigera.io/manifests/canal.yaml -O
+
+
+# Using Flannel for the pod network: https://github.com/flannel-io/flannel#deploying-flannel-manually
+
+kubectl cluster-info
+
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+export ARCH=amd64
+curl -sSL "https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml" | sed "s/amd64/${ARCH}/g" | kubectl apply -f -
+
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+
+
+# But some pods are not working. Debug:
+
+kubectl get pods --all-namespaces
+
+kubectl describe pod -n kube-system kube-flannel-ds-sxtcc
+
+modprobe vxlan
+
+# This solved the issue: https://github.com/k3s-io/k3s/issues/4234
+sudo apt install linux-modules-extra-raspi
+sudo reboot
+
+# I also used this pod network: https://projectcalico.docs.tigera.io/getting-started/kubernetes/flannel/flannel. But after the above fix, it might not have been needed. Actually, with this, I couldn't get the dashboard to work. So use the kube-flannel.yml above.
+
+# We need to install linux-modules-extra-raspi on all workers as well.
+sudo apt install linux-modules-extra-raspi
+sudo reboot
+
+# Ok now run the above command in worker nodes. And everything should work.
+
+# And we can configure kubectl on the remote host as well (copy it from the control plane):
+scp ubuntu@192.168.86.101:/home/ubuntu/.kube/config ~/.kube/config
+
+# Dashboard: https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/
+# Also these instructions for getting the token: https://levelup.gitconnected.com/step-by-step-slow-guide-kubernetes-dashboard-on-raspberry-pi-cluster-part-1-308456b69dba
+
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.5.0/aio/deploy/recommended.yaml
+
+kubectl -n kubernetes-dashboard get secret $(kubectl -n kubernetes-dashboard get sa/kubernetes-dashboard -o jsonpath="{.secrets[0].name}") -o go-template="{{.data.token | base64decode}}"
+
+# Run some container, to see that it all works:
+kubectl create deployment hello-world --image=arm64v8/hello-world
+
+# HTTPS: https://github.com/kubernetes/dashboard/blob/master/docs/user/installation.md#recommended-setup
+# plus edit service and change to nodeport: https://bobcares.com/blog/install-kubernetes-dashboard-with-nodeport/
+
+kubectl delete clusterrolebinding kubernetes-dashboard
+# Create admin role for dashboard user:
+https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/README.md#official-release
